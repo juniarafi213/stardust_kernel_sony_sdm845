@@ -126,6 +126,7 @@ struct task_struct init_task
 	INIT_VTIME(init_task)
 	INIT_NUMA_BALANCING(init_task)
 	INIT_KASAN(init_task)
+	INIT_SECCOMP_FILTER_COUNT(init_task)
 };
 
 EXPORT_SYMBOL(init_task);
