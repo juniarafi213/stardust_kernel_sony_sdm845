@@ -2028,19 +2028,16 @@ static void move_active_pages_to_lru(struct lruvec *lruvec,
 	struct pglist_data *pgdat = lruvec_pgdat(lruvec);
 	unsigned long pgmoved = 0;
 	struct page *page;
-	int nr_pages;
 
 	while (!list_empty(list)) {
 		page = lru_to_page(list);
 		lruvec = mem_cgroup_page_lruvec(page, pgdat);
 
 		VM_BUG_ON_PAGE(PageLRU(page), page);
+		list_del(&page->lru);
 		SetPageLRU(page);
-
-		nr_pages = hpage_nr_pages(page);
-		update_lru_size(lruvec, lru, page_zonenum(page), nr_pages);
-		list_move(&page->lru, &lruvec->lists[lru]);
-		pgmoved += nr_pages;
+		add_page_to_lru_list(page, lruvec, lru);
+		pgmoved += hpage_nr_pages(page);
 
 		if (put_page_testzero(page)) {
 			__ClearPageLRU(page);
