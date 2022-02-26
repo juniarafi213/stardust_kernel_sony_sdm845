@@ -61,6 +61,9 @@
 #include <linux/hugetlb.h>
 #include <linux/backing-dev.h>
 #include <linux/page_idle.h>
+#include <linux/memremap.h>
+#include <linux/userfaultfd_k.h>
+#include <linux/mm_inline.h>
 
 #include <asm/tlbflush.h>
 
@@ -923,48 +926,57 @@ struct page_referenced_arg {
 /*
  * arg: page_referenced_arg will be passed
  */
-static int page_referenced_one(struct page *page, struct vm_area_struct *vma,
+static bool page_referenced_one(struct page *page, struct vm_area_struct *vma,
 			unsigned long address, void *arg)
 {
-	struct mm_struct *mm = vma->vm_mm;
 	struct page_referenced_arg *pra = arg;
-	pmd_t *pmd;
-	pte_t *pte;
-	spinlock_t *ptl;
+	struct page_vma_mapped_walk pvmw = {
+		.page = page,
+		.vma = vma,
+		.address = address,
+	};
 	int referenced = 0;
 
-	if (!page_check_address_transhuge(page, mm, address, &pmd, &pte, &ptl))
-		return SWAP_AGAIN;
+	while (page_vma_mapped_walk(&pvmw)) {
+		address = pvmw.address;
 
-	if (vma->vm_flags & VM_LOCKED) {
-		if (pte)
-			pte_unmap(pte);
-		spin_unlock(ptl);
-		pra->vm_flags |= VM_LOCKED;
-		return SWAP_FAIL; /* To break the loop */
-	}
-
-	if (pte) {
-		if (ptep_clear_flush_young_notify(vma, address, pte)) {
-			/*
-			 * Don't treat a reference through a sequentially read
-			 * mapping as such.  If the page has been used in
-			 * another mapping, we will catch it; if this other
-			 * mapping is already gone, the unmap path will have
-			 * set PG_referenced or activated the page.
-			 */
-			if (likely(!(vma->vm_flags & VM_SEQ_READ)))
-				referenced++;
+		if (vma->vm_flags & VM_LOCKED) {
+			page_vma_mapped_walk_done(&pvmw);
+			pra->vm_flags |= VM_LOCKED;
+			return false; /* To break the loop */
 		}
-		pte_unmap(pte);
-	} else if (IS_ENABLED(CONFIG_TRANSPARENT_HUGEPAGE)) {
-		if (pmdp_clear_flush_young_notify(vma, address, pmd))
-			referenced++;
-	} else {
-		/* unexpected pmd-mapped page? */
-		WARN_ON_ONCE(1);
+
+		if (pvmw.pte) {
+			if (lru_gen_enabled() && pte_young(*pvmw.pte) &&
+			    !(vma->vm_flags & (VM_SEQ_READ | VM_RAND_READ))) {
+				lru_gen_look_around(&pvmw);
+				referenced++;
+			}
+
+			if (ptep_clear_flush_young_notify(vma, address,
+						pvmw.pte)) {
+				/*
+				 * Don't treat a reference through
+				 * a sequentially read mapping as such.
+				 * If the page has been used in another mapping,
+				 * we will catch it; if this other mapping is
+				 * already gone, the unmap path will have set
+				 * PG_referenced or activated the page.
+				 */
+				if (likely(!(vma->vm_flags & VM_SEQ_READ)))
+					referenced++;
+			}
+		} else if (IS_ENABLED(CONFIG_TRANSPARENT_HUGEPAGE)) {
+			if (pmdp_clear_flush_young_notify(vma, address,
+						pvmw.pmd))
+				referenced++;
+		} else {
+			/* unexpected pmd-mapped page? */
+			WARN_ON_ONCE(1);
+		}
+
+		pra->mapcount--;
 	}
-	spin_unlock(ptl);
 
 	if (referenced)
 		clear_page_idle(page);
@@ -976,11 +988,10 @@ static int page_referenced_one(struct page *page, struct vm_area_struct *vma,
 		pra->vm_flags |= vma->vm_flags;
 	}
 
-	pra->mapcount--;
 	if (!pra->mapcount)
-		return SWAP_SUCCESS; /* To break the loop */
+		return false; /* To break the loop */
 
-	return SWAP_AGAIN;
+	return true;
 }
 
 static bool invalid_page_referenced_vma(struct vm_area_struct *vma, void *arg)
