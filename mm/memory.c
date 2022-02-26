@@ -2750,12 +2750,32 @@ static void lru_gen_exit_fault(void)
 {
 	current->in_lru_fault = false;
 }
+
+static void lru_gen_swap_refault(struct page *page, swp_entry_t entry)
+{
+	void *item;
+	struct address_space *mapping = swap_address_space(entry);
+	pgoff_t index = swp_offset(entry);
+
+	if (!lru_gen_enabled())
+		return;
+
+	rcu_read_lock();
+	item = radix_tree_lookup(&mapping->i_pages, index);
+	rcu_read_unlock();
+	if (radix_tree_exceptional_entry(item))
+		lru_gen_refault(page, item);
+}
 #else
 static void lru_gen_enter_fault(struct vm_area_struct *vma)
 {
 }
 
 static void lru_gen_exit_fault(void)
+{
+}
+
+static void lru_gen_swap_refault(struct page *page, swp_entry_t entry)
 {
 }
 #endif /* CONFIG_LRU_GEN */
@@ -2805,8 +2825,30 @@ int do_swap_page(struct fault_env *fe, pte_t orig_pte)
 	delayacct_set_flag(DELAYACCT_PF_SWAPIN);
 	page = lookup_swap_cache(entry);
 	if (!page) {
-		page = swapin_readahead(entry,
-					GFP_HIGHUSER_MOVABLE, vma, fe->address);
+		if (skip_swapcache) {
+			page = alloc_page_vma(GFP_HIGHUSER_MOVABLE | __GFP_CMA,
+					      vma, fe->address);
+			if (page) {
+				__SetPageLocked(page);
+				__SetPageSwapBacked(page);
+				set_page_private(page, entry.val);
+				lru_gen_swap_refault(page, entry);
+				lru_cache_add_anon(page);
+				swap_readpage(page, true);
+			}
+		} else if (fe->flags & FAULT_FLAG_SPECULATIVE) {
+			/*
+			 * Don't try readahead during a speculative page fault
+			 * as the VMA's boundaries may change in our back.
+			 */
+			delayacct_clear_flag(DELAYACCT_PF_SWAPIN);
+			ret = VM_FAULT_RETRY;
+			goto out;
+ else {
+			page = swapin_readahead(entry, GFP_HIGHUSER_MOVABLE,
+						    vma, fe->address);
+		}
+
 		if (!page) {
 			/*
 			 * Back out if the VMA has changed in our back during
