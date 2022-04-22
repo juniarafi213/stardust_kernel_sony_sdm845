@@ -3992,6 +3992,9 @@ static int __handle_mm_fault(struct vm_area_struct *vma, unsigned long address,
 	return handle_pte_fault(&fe);
 }
 
+static void lru_gen_enter_fault(struct vm_area_struct *vma);
+static void lru_gen_exit_fault(void);
+
 #ifdef CONFIG_SPECULATIVE_PAGE_FAULT
 
 #ifndef __HAVE_ARCH_PTE_SPECIAL
@@ -4176,8 +4179,11 @@ int __handle_speculative_fault(struct mm_struct *mm, unsigned long address,
 	}
 
 	mem_cgroup_oom_enable();
+	lru_gen_enter_fault(fe.vma);
 	ret = handle_pte_fault(&fe);
+	lru_gen_exit_fault();
 	mem_cgroup_oom_disable();
+
 
 	/*
 	 * If there is no need to retry, don't return the vma to the caller.
