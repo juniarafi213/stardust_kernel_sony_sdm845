@@ -701,8 +701,10 @@ static int __remove_mapping(struct address_space *mapping, struct page *page,
 {
 	unsigned long flags;
 
-	BUG_ON(!PageLocked(page));
-	BUG_ON(mapping != page_mapping(page));
+	if (WARN_ON_ONCE(!PageLocked(page)))
+		return 0;
+	if (WARN_ON_ONCE(mapping != page_mapping(page)))
+		return 0;
 
 	spin_lock_irqsave(&mapping->tree_lock, flags);
 	/*

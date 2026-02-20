@@ -2667,10 +2667,10 @@ static inline unsigned int task_pl(struct task_struct *p)
 }
 
 #define pct_to_real(tunable)	\
-		(div64_u64((u64)tunable * (u64)max_task_load(), 100))
+		(div_u64((u64)(tunable) * (u64)max_task_load(), 100))
 
 #define real_to_pct(tunable)	\
-		(div64_u64((u64)tunable * (u64)100, (u64)max_task_load()))
+		(div_u64((u64)(tunable) * (u64)100, (u32)max_task_load()))
 
 static inline bool task_in_related_thread_group(struct task_struct *p)
 {

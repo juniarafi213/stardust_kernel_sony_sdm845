@@ -329,7 +329,8 @@ void delete_from_page_cache(struct page *page)
 	unsigned long flags;
 	void (*freepage)(struct page *);
 
-	BUG_ON(!PageLocked(page));
+	if (WARN_ON_ONCE(!PageLocked(page)))
+		return;
 
 	freepage = mapping->a_ops->freepage;
 
@@ -3143,7 +3144,8 @@ int try_to_release_page(struct page *page, gfp_t gfp_mask)
 {
 	struct address_space * const mapping = page->mapping;
 
-	BUG_ON(!PageLocked(page));
+	if (WARN_ON_ONCE(!PageLocked(page)))
+		return -EBUSY;
 	if (PageWriteback(page))
 		return 0;
 

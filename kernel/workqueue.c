@@ -290,8 +290,13 @@ static cpumask_var_t *wq_numa_possible_cpumask;
 static bool wq_disable_numa;
 module_param_named(disable_numa, wq_disable_numa, bool, 0444);
 
-/* see the comment above the definition of WQ_POWER_EFFICIENT */
-static bool wq_power_efficient = IS_ENABLED(CONFIG_WQ_POWER_EFFICIENT_DEFAULT);
+/* 
+ * PERFORMANCE OPTIMIZATION: 
+ * Force unbound workqueues to be power-efficient by default, ignoring the 
+ * defconfig. This limits unbound work to the LITTLE cluster, saving battery 
+ * and reserving BIG cores for foreground tasks like UI.
+ */
+static bool wq_power_efficient = true;
 module_param_named(power_efficient, wq_power_efficient, bool, 0444);
 
 bool wq_online;				/* can kworkers be created yet? */

@@ -1108,10 +1108,13 @@ EXPORT_SYMBOL_GPL(add_input_randomness);
 #ifdef CONFIG_BLOCK
 void add_disk_randomness(struct gendisk *disk)
 {
-	if (!disk || !disk->random)
-		return;
-	/* First major is 1, so we get >= 0x200 here. */
-	add_timer_randomness(disk->random, 0x100 + disk_devt(disk));
+	/* 
+	 * PERFORMANCE OPTIMIZATION:
+	 * Disable SSD/eMMC/UFS disk randomness to prevent severe CPU spinlock
+	 * contention and overhead in the block/IO hotpaths.
+	 * Android devices have efficient HW-RNG for entropy.
+	 */
+	return;
 }
 EXPORT_SYMBOL_GPL(add_disk_randomness);
 

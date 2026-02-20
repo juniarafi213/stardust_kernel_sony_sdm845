@@ -3202,7 +3202,7 @@ int update_preferred_cluster(struct related_thread_group *grp,
 DEFINE_MUTEX(policy_mutex);
 
 #define pct_to_real(tunable)	\
-		(div64_u64((u64)tunable * (u64)max_task_load(), 100))
+		(div_u64((u64)(tunable) * (u64)max_task_load(), 100))
 
 unsigned int update_freq_aggregate_threshold(unsigned int threshold)
 {
@@ -3667,12 +3667,12 @@ void walt_map_freq_to_load(void)
 		if (is_min_capacity_cluster(cluster)) {
 			int fcpu = cluster_first_cpu(cluster);
 
-			coloc_boost_load = div64_u64(
+			coloc_boost_load = div_u64(
 				((u64)sched_ravg_window *
 				arch_scale_cpu_capacity(NULL, fcpu) *
 				sysctl_sched_little_cluster_coloc_fmin_khz),
-				(u64)1024 * cpu_max_possible_freq(fcpu));
-			coloc_boost_load = div64_u64(coloc_boost_load << 2, 5);
+				(u32)(1024 * cpu_max_possible_freq(fcpu)));
+			coloc_boost_load = div_u64(coloc_boost_load << 2, 5);
 			break;
 		}
 	}

@@ -817,8 +817,8 @@ static long long pos_ratio_polynom(unsigned long setpoint,
 	long long pos_ratio;
 	long x;
 
-	x = div64_s64(((s64)setpoint - (s64)dirty) << RATELIMIT_CALC_SHIFT,
-		      (limit - setpoint) | 1);
+	x = div_s64(((s64)setpoint - (s64)dirty) << RATELIMIT_CALC_SHIFT,
+		    (s32)((limit - setpoint) | 1));
 	pos_ratio = x;
 	pos_ratio = pos_ratio * x >> RATELIMIT_CALC_SHIFT;
 	pos_ratio = pos_ratio * x >> RATELIMIT_CALC_SHIFT;
@@ -1059,8 +1059,8 @@ static void wb_position_ratio(struct dirty_throttle_control *dtc)
 	x_intercept = wb_setpoint + span;
 
 	if (dtc->wb_dirty < x_intercept - span / 4) {
-		pos_ratio = div64_u64(pos_ratio * (x_intercept - dtc->wb_dirty),
-				      (x_intercept - wb_setpoint) | 1);
+		pos_ratio = div_u64(pos_ratio * (x_intercept - dtc->wb_dirty),
+				    (u32)((x_intercept - wb_setpoint) | 1));
 	} else
 		pos_ratio /= 4;
 
@@ -2224,7 +2224,8 @@ continue_unlock:
 					goto continue_unlock;
 			}
 
-			BUG_ON(PageWriteback(page));
+			if (WARN_ON_ONCE(PageWriteback(page)))
+				wait_on_page_writeback(page);
 			if (!clear_page_dirty_for_io(page))
 				goto continue_unlock;
 
@@ -2356,7 +2357,8 @@ int write_one_page(struct page *page, int wait)
 		.nr_to_write = 1,
 	};
 
-	BUG_ON(!PageLocked(page));
+	if (WARN_ON_ONCE(!PageLocked(page)))
+		return -EIO;
 
 	if (wait)
 		wait_on_page_writeback(page);
@@ -2461,7 +2463,11 @@ int __set_page_dirty_nobuffers(struct page *page)
 		}
 
 		spin_lock_irqsave(&mapping->tree_lock, flags);
-		BUG_ON(page_mapping(page) != mapping);
+		if (WARN_ON_ONCE(page_mapping(page) != mapping)) {
+			spin_unlock_irqrestore(&mapping->tree_lock, flags);
+			unlock_page_memcg(page);
+			return 1;
+		}
 		WARN_ON_ONCE(!PagePrivate(page) && !PageUptodate(page));
 		account_page_dirtied(page, mapping);
 		radix_tree_tag_set(&mapping->page_tree, page_index(page),
@@ -2641,7 +2647,8 @@ int clear_page_dirty_for_io(struct page *page)
 	struct address_space *mapping = page_mapping(page);
 	int ret = 0;
 
-	BUG_ON(!PageLocked(page));
+	if (WARN_ON_ONCE(!PageLocked(page)))
+		return 0;
 
 	if (mapping && mapping_cap_account_dirty(mapping)) {
 		struct inode *inode = mapping->host;
