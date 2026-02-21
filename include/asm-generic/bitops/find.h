@@ -1,6 +1,9 @@
 #ifndef _ASM_GENERIC_BITOPS_FIND_H_
 #define _ASM_GENERIC_BITOPS_FIND_H_
 
+extern unsigned long _find_next_bit(const unsigned long *addr,
+		unsigned long nbits, unsigned long start, unsigned long invert);
+
 #ifndef find_next_bit
 /**
  * find_next_bit - find the next set bit in a memory region
@@ -13,6 +16,17 @@
  */
 extern unsigned long find_next_bit(const unsigned long *addr, unsigned long
 		size, unsigned long offset);
+
+#define find_next_bit(addr, size, offset) \
+	((__builtin_constant_p((size)) && (size) <= BITS_PER_LONG) ? \
+		(((offset) >= (size)) ? (size) : \
+			((*(const unsigned long *)(addr) & (~0UL << (offset))) ? \
+				((unsigned long)__ffs(*(const unsigned long *)(addr) & (~0UL << (offset))) < (unsigned long)(size) ? \
+				 (unsigned long)__ffs(*(const unsigned long *)(addr) & (~0UL << (offset))) : \
+				 (unsigned long)(size)) : \
+				(unsigned long)(size))) : \
+		_find_next_bit((addr), (size), (offset), 0UL))
+
 #endif
 
 #ifndef find_next_zero_bit
@@ -27,6 +41,17 @@ extern unsigned long find_next_bit(const unsigned long *addr, unsigned long
  */
 extern unsigned long find_next_zero_bit(const unsigned long *addr, unsigned
 		long size, unsigned long offset);
+
+#define find_next_zero_bit(addr, size, offset) \
+	((__builtin_constant_p((size)) && (size) <= BITS_PER_LONG) ? \
+		(((offset) >= (size)) ? (size) : \
+			((~(*(const unsigned long *)(addr)) & (~0UL << (offset))) ? \
+				((unsigned long)__ffs(~(*(const unsigned long *)(addr)) & (~0UL << (offset))) < (unsigned long)(size) ? \
+				 (unsigned long)__ffs(~(*(const unsigned long *)(addr)) & (~0UL << (offset))) : \
+				 (unsigned long)(size)) : \
+				(unsigned long)(size))) : \
+		_find_next_bit((addr), (size), (offset), ~0UL))
+
 #endif
 
 #ifdef CONFIG_GENERIC_FIND_FIRST_BIT

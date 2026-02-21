@@ -21,14 +21,12 @@
 #include <linux/export.h>
 #include <linux/kernel.h>
 
-#if !defined(find_next_bit) || !defined(find_next_zero_bit)
-
 /*
  * This is a common helper function for find_next_bit and
  * find_next_zero_bit.  The difference is the "invert" argument, which
  * is XORed with each fetched word before searching it for one bits.
  */
-static unsigned long _find_next_bit(const unsigned long *addr,
+unsigned long _find_next_bit(const unsigned long *addr,
 		unsigned long nbits, unsigned long start, unsigned long invert)
 {
 	unsigned long tmp;
@@ -54,28 +52,26 @@ static unsigned long _find_next_bit(const unsigned long *addr,
 
 	return min(start + __ffs(tmp), nbits);
 }
-#endif
+EXPORT_SYMBOL(_find_next_bit);
 
-#ifndef find_next_bit
 /*
  * Find the next set bit in a memory region.
  */
+#undef find_next_bit
 unsigned long find_next_bit(const unsigned long *addr, unsigned long size,
 			    unsigned long offset)
 {
 	return _find_next_bit(addr, size, offset, 0UL);
 }
 EXPORT_SYMBOL(find_next_bit);
-#endif
 
-#ifndef find_next_zero_bit
+#undef find_next_zero_bit
 unsigned long find_next_zero_bit(const unsigned long *addr, unsigned long size,
 				 unsigned long offset)
 {
 	return _find_next_bit(addr, size, offset, ~0UL);
 }
 EXPORT_SYMBOL(find_next_zero_bit);
-#endif
 
 #ifndef find_first_bit
 /*
