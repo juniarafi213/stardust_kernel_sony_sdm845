@@ -42,8 +42,11 @@ extern int test_and_change_bit(int nr, volatile unsigned long *p);
 #include <asm-generic/bitops/fls64.h>
 #include <asm-generic/bitops/find.h>
 
+
+
 #include <asm-generic/bitops/sched.h>
-#include <asm-generic/bitops/hweight.h>
+#include <asm/arch_hweight.h>
+#include <asm-generic/bitops/const_hweight.h>
 #include <asm-generic/bitops/lock.h>
 
 #include <asm-generic/bitops/non-atomic.h>

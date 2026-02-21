@@ -21,6 +21,14 @@
 #include <linux/export.h>
 #include <linux/kernel.h>
 
+
+#ifdef CONFIG_ARM64
+#undef find_next_bit
+#undef find_next_zero_bit
+#undef find_first_bit
+#undef find_first_zero_bit
+#endif
+
 /*
  * This is a common helper function for find_next_bit and
  * find_next_zero_bit.  The difference is the "invert" argument, which
