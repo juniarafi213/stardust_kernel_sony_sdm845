@@ -161,7 +161,7 @@ static void __evdev_queue_syn_dropped(struct evdev_client *client)
 	time = client->clk_type == EV_CLK_REAL ?
 			ktime_get_real() :
 			client->clk_type == EV_CLK_MONO ?
-				ktime_get() :
+				ns_to_ktime(ktime_get_mono_fast_ns()) :
 				ktime_get_boottime();
 
 	ev.time = ktime_to_timeval(time);
@@ -306,7 +306,7 @@ static void evdev_events(struct input_handle *handle,
 	struct evdev_client *client;
 	ktime_t ev_time[EV_CLK_MAX];
 
-	ev_time[EV_CLK_MONO] = ktime_get();
+	ev_time[EV_CLK_MONO] = ns_to_ktime(ktime_get_mono_fast_ns());
 	ev_time[EV_CLK_REAL] = ktime_mono_to_real(ev_time[EV_CLK_MONO]);
 	ev_time[EV_CLK_BOOT] = ktime_mono_to_any(ev_time[EV_CLK_MONO],
 						 TK_OFFS_BOOT);

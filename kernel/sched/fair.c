@@ -3761,6 +3761,8 @@ place_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int initial)
 		 */
 		if (sched_feat(GENTLE_FAIR_SLEEPERS))
 			thresh >>= 1;
+		else
+			thresh = 0;
 
 		vruntime -= thresh;
 	}

@@ -133,7 +133,7 @@ __iter_div_u64_rem(u64 dividend, u32 divisor, u64 *remainder)
 	return ret;
 }
 
-#if defined(CONFIG_ARCH_SUPPORTS_INT128) && defined(__SIZEOF_INT128__)
+#if (defined(CONFIG_ARCH_SUPPORTS_INT128) || defined(__aarch64__)) && defined(__SIZEOF_INT128__)
 
 #ifndef mul_u64_u32_shr
 static inline u64 mul_u64_u32_shr(u64 a, u32 mul, unsigned int shift)

@@ -4812,8 +4812,8 @@ static void clearpad_report_finger_n(struct clearpad_t *this,
 static int get_num_fingers_f12(struct clearpad_t *this,
 	int *num_fingers)
 {
-	int rc, num;
-	u16 val, mask;
+	int rc;
+	u16 val;
 	const int max_objects = this->extents.n_fingers;
 
 	/* F12_2D_DATA15: Object Attention */
@@ -4824,13 +4824,9 @@ static int get_num_fingers_f12(struct clearpad_t *this,
 
 	val = le16_to_cpu(val);
 
-	for (num = 0, mask = 0x1; num < max_objects; num++, mask <<= 1)
-		if (val < mask)
-			break;
+	*num_fingers = min_t(int, fls(val), max_objects);
 
-	*num_fingers = num;
-
-	LOG_CHECK(this, "fingers=%d, 0x%04hX", num, val);
+	LOG_CHECK(this, "fingers=%d, 0x%04hX", *num_fingers, val);
 end:
 	return rc;
 }
@@ -4839,8 +4835,6 @@ static int clearpad_read_fingers_f12(struct clearpad_t *this)
 {
 	int rc, finger, num_fingers;
 	u8 buf[this->extents.n_fingers * this->extents.n_bytes_per_object];
-
-	memset(buf, 0, sizeof(buf));
 
 	rc = get_num_fingers_f12(this, &num_fingers);
 	if (rc)
@@ -4852,6 +4846,11 @@ static int clearpad_read_fingers_f12(struct clearpad_t *this)
 			buf, num_fingers * this->extents.n_bytes_per_object);
 		if (rc)
 			goto end;
+	}
+
+	if (num_fingers < this->extents.n_fingers) {
+		memset(&buf[num_fingers * this->extents.n_bytes_per_object], 0,
+		       (this->extents.n_fingers - num_fingers) * this->extents.n_bytes_per_object);
 	}
 
 	for (finger = 0; finger < this->extents.n_fingers; finger++)

@@ -32,11 +32,12 @@ static unsigned long _find_next_bit(const unsigned long *addr,
 		unsigned long nbits, unsigned long start, unsigned long invert)
 {
 	unsigned long tmp;
+	const unsigned long *p = addr + start / BITS_PER_LONG;
 
-	if (!nbits || start >= nbits)
+	if (unlikely(start >= nbits))
 		return nbits;
 
-	tmp = addr[start / BITS_PER_LONG] ^ invert;
+	tmp = *p ^ invert;
 
 	/* Handle 1st word. */
 	tmp &= BITMAP_FIRST_WORD_MASK(start);
@@ -47,7 +48,8 @@ static unsigned long _find_next_bit(const unsigned long *addr,
 		if (start >= nbits)
 			return nbits;
 
-		tmp = addr[start / BITS_PER_LONG] ^ invert;
+		p++;
+		tmp = *p ^ invert;
 	}
 
 	return min(start + __ffs(tmp), nbits);
@@ -84,8 +86,10 @@ unsigned long find_first_bit(const unsigned long *addr, unsigned long size)
 	unsigned long idx;
 
 	for (idx = 0; idx * BITS_PER_LONG < size; idx++) {
-		if (addr[idx])
-			return min(idx * BITS_PER_LONG + __ffs(addr[idx]), size);
+		unsigned long val = addr[idx];
+
+		if (val)
+			return min(idx * BITS_PER_LONG + __ffs(val), size);
 	}
 
 	return size;
@@ -102,8 +106,10 @@ unsigned long find_first_zero_bit(const unsigned long *addr, unsigned long size)
 	unsigned long idx;
 
 	for (idx = 0; idx * BITS_PER_LONG < size; idx++) {
-		if (addr[idx] != ~0UL)
-			return min(idx * BITS_PER_LONG + ffz(addr[idx]), size);
+		unsigned long val = ~addr[idx];
+
+		if (val)
+			return min(idx * BITS_PER_LONG + __ffs(val), size);
 	}
 
 	return size;
@@ -134,15 +140,16 @@ EXPORT_SYMBOL(find_last_bit);
 #ifdef __BIG_ENDIAN
 
 #if !defined(find_next_bit_le) || !defined(find_next_zero_bit_le)
-static unsigned long _find_next_bit_le(const unsigned long *addr,
+static unsigned long _find_next_bit_le(const void *addr,
 		unsigned long nbits, unsigned long start, unsigned long invert)
 {
 	unsigned long tmp;
+	const unsigned long *p = (const unsigned long *)addr + start / BITS_PER_LONG;
 
-	if (!nbits || start >= nbits)
+	if (unlikely(start >= nbits))
 		return nbits;
 
-	tmp = addr[start / BITS_PER_LONG] ^ invert;
+	tmp = *p ^ invert;
 
 	/* Handle 1st word. */
 	tmp &= swab(BITMAP_FIRST_WORD_MASK(start));
@@ -153,7 +160,8 @@ static unsigned long _find_next_bit_le(const unsigned long *addr,
 		if (start >= nbits)
 			return nbits;
 
-		tmp = addr[start / BITS_PER_LONG] ^ invert;
+		p++;
+		tmp = *p ^ invert;
 	}
 
 	return min(start + __ffs(swab(tmp)), nbits);
