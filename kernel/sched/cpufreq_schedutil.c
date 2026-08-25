@@ -11,6 +11,9 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+extern unsigned int rfx_apply_vorpal_shaping(int cpu, unsigned int freq,
+					      unsigned long max_cap, u64 time);
+
 #include <linux/cpufreq.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
@@ -532,6 +535,7 @@ static void sugov_update_single(struct update_util_data *hook, u64 time,
 		sugov_iowait_apply(sg_cpu, time, &util, &max);
 		sugov_walt_adjust(sg_cpu, &util, &max);
 		next_f = get_next_freq(sg_policy, util, max);
+                next_f = rfx_apply_vorpal_shaping(sg_cpu->cpu, next_f, max, time);
 		/*
 		 * Do not reduce the frequency if the CPU has not been idle
 		 * recently, as the reduction is likely to be premature then.
