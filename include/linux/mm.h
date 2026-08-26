@@ -171,6 +171,10 @@ int vm_workingset_protection_update_handler(
 	void __user *buffer, size_t *lenp, loff_t *ppos);
 #endif
 
+extern unsigned long sysctl_anon_min_kbytes;
+extern unsigned long sysctl_clean_low_kbytes;
+extern unsigned long sysctl_clean_min_kbytes;
+
 extern unsigned long sysctl_user_reserve_kbytes;
 extern unsigned long sysctl_admin_reserve_kbytes;
 
