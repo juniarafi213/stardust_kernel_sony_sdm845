@@ -11,9 +11,6 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
-extern unsigned int rfx_apply_vorpal_shaping(int cpu, unsigned int freq,
-					      unsigned long max_cap, u64 time);
-
 #include <linux/cpufreq.h>
 #include <linux/kthread.h>
 #include <linux/slab.h>
@@ -21,6 +18,10 @@ extern unsigned int rfx_apply_vorpal_shaping(int cpu, unsigned int freq,
 #include <linux/sched/sysctl.h>
 #include "sched.h"
 #include "tune.h"
+
+extern unsigned int rfx_apply_vorpal_shaping(int cpu, unsigned int freq,
+                                              unsigned long max_cap, u64 time);
+
 
 struct sugov_tunables {
 	struct gov_attr_set attr_set;
