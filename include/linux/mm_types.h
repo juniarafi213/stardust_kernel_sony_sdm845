@@ -2,8 +2,6 @@
 #define _LINUX_MM_TYPES_H
 
 
-#include <linux/sched.h>
-
 #include <linux/auxvec.h>
 #include <linux/types.h>
 #include <linux/threads.h>
@@ -719,5 +717,12 @@ static inline const char __user *vma_get_anon_name(struct vm_area_struct *vma)
 
 	return vma->anon_name;
 }
+
+/*
+ * sched.h must come after struct mm_struct is fully defined (kernel 4.9 has no
+ * mm_types_task.h split), otherwise inline helpers in sched.h that dereference
+ * mm_struct see it as an incomplete type.
+ */
+#include <linux/sched.h>
 
 #endif /* _LINUX_MM_TYPES_H */
