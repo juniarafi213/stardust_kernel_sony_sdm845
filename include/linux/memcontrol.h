@@ -520,8 +520,6 @@ static inline void mem_cgroup_unlock_pages(void)
  * idx can be of type enum memcg_stat_item or node_stat_item.
  * Keep in sync with memcg_exact_page_state().
  */
-static inline unsigned long memcg_page_state(struct mem_cgroup *memcg,
-					     int idx)
 
 static inline void __mem_cgroup_update_page_stat(struct page *page,
 						 struct mem_cgroup *memcg,
